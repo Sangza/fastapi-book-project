@@ -1,0 +1,43 @@
+name: CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    needs: test  # This ensures the deploy job runs only after tests pass
+
+    steps:
+      # 1. Checkout the repository
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # 2. Set up SSH for secure deployment (if you need to deploy via SSH)
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+
+      # 3. Build and push Docker image
+      - name: Build and push Docker image
+        run: |
+          # Build the Docker image using the Dockerfile in the repository root.
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-book-project:latest .
+          # Log in to Docker Hub using the provided secrets.
+          echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+          # Push the image to Docker Hub.
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-book-project:latest
+
+      # 4. Deploy to your server using SSH
+      - name: Deploy to Server
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-book-project:latest
+            docker stop fastapi_app || true
+            docker rm fastapi_app || true
+            docker run -d --name fastapi_app -p 8000:8000 ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-book-project:latest
+          EOF
