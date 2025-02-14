@@ -1,4 +1,4 @@
-name: CI Pipeline
+name: CI pipeline
 
 on:
   pull:
@@ -15,7 +15,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9'  # adjust as needed
+          python-version: '3.9'
 
       - name: Install dependencies
         run: |
