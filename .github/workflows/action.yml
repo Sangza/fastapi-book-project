@@ -53,10 +53,9 @@ jobs:
           SERVER_IP: ${{ secrets.SERVER_IP }}
         run: |
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $SERVER_USER@$SERVER_IP << 'EOF'
-            cd ~/HNGx-fastapi-book-project  # Make sure this is the correct path
+            cd ~/fastapi-book-project  # Make sure this is the correct path
             git pull origin main
-            python3 -m venv venv
-            source venv/bin/activate  # Activate virtual environment
+            source ../venv/bin/activate  # Activate virtual environment
             pip install --upgrade pip
             pip install -r requirements.txt
             sudo systemctl restart fastapi  # Restart FastAPI systemd service
