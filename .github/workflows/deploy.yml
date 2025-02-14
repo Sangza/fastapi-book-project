@@ -31,6 +31,7 @@ jobs:
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $SERVER_USER@$SERVER_IP << 'EOF'
             cd ~/HNGx-fastapi-book-project  # Make sure this is the correct path
             git pull origin main
+            python3 -m venv venv
             source venv/bin/activate  # Activate virtual environment
             pip install --upgrade pip
             pip install -r requirements.txt
