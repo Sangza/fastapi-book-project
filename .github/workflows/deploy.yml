@@ -2,12 +2,14 @@ name: CD - Deploy Application
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
   deploy:
-    name: deploy
+    name: Deploy Application
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
       - name: Checkout repository
@@ -20,20 +22,17 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
 
-      - name: Build and push Docker image
+      - name: Deploy to Server (Without Docker)
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_IP: ${{ secrets.SERVER_IP }}
         run: |
-          # Pull latest code is handled by the checkout
-          docker build --no-cache -t ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-book-project:latest .
-          echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-book-project:latest
-
-      - name: Deploy to Server
-        run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
-            cd /path/to/your/app   # Update this path to where your app is located on your server
-            git pull origin main   # Optional if you are using Git; if you're deploying via Docker, this may not be needed
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-book-project:latest
-            docker stop fastapi_app || true
-            docker rm fastapi_app || true
-            docker run -d --name fastapi_app -p 8000:8000 ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-book-project:latest
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $SERVER_USER@$SERVER_IP << 'EOF'
+            cd ~/HNGx-fastapi-book-project  # Make sure this is the correct path
+            git pull origin main
+            source venv/bin/activate  # Activate virtual environment
+            pip install --upgrade pip
+            pip install -r requirements.txt
+            sudo systemctl restart fastapi  # Restart FastAPI systemd service
           EOF
